@@ -1,0 +1,399 @@
+; This is the Calva REPL Window.
+; It's just a file, really, with some special treatment from Calva.
+; Use it as a REPL input prompt if you like. (When the REPL is connected.)
+; TIPS: The keyboard shortcut `ctrl+alt+o r` shows and focuses this window
+; Please see https://calva.io/repl-window/ for more info.
+; Happy coding! ♥️
+
+; TIPS: As with any Clojure file when the REPL is connected:
+; - `alt+enter` evaluates the current top level form.
+; - `ctrl+enter` evaluates the current form.
+; Special for this file:
+; - `alt+up` and `alt+down` traverse up and down the REPL command history
+;    when the cursor is after the last contents at the prompt
+; 
+; See also the Calva Inspector: https://calva.io/inspector/
+
+PLEASE NOTE
+We will update the default location of this file.
+The new default location will be
+  "<projectRootPath>/.calva/repl.calva-repl"
+For now the legacy path is used by default.
+To give yourself a smooth transition, you can opt in
+to the change, by configuring this setting as false:
+  "calva.useLegacyReplWindowPath"
+and then add "**/.calva/repl.calva-repl" to your ".gitignore" file.
+
+
+This file is configured as the output destination for all REPL output.
+You can configure this with the setting:
+  "calva.outputDestinations"
+
+
+; Jacking in...
+; Connecting using "deps.edn" project type.
+; You can make Calva auto-select this.
+;   - See https://calva.io/connect-sequences/
+; 
+
+; Starting Jack-in: (cd /home/siavash/Documents/codes/ai/agentic-ai; clojure -Sdeps '{:deps {nrepl/nrepl {:mvn/version,"1.3.1"},cider/cider-nrepl {:mvn/version,"0.52.1"}}}' -M -m nrepl.cmdline --middleware "[cider.nrepl/cider-middleware]")
+; Using host:port localhost:34613 ...
+; Hooking up nREPL sessions ...
+; Connected session: clj
+; Evaluating code from settings: 'calva.autoEvaluateCode.onConnect.clj'
+(when-let [requires (resolve 'clojure.main/repl-requires)] (clojure.core/apply clojure.core/require @requires))
+nil
+clj꞉user꞉> 
+"Please see https://calva.io/output/#about-stdout-in-the-repl-window
+about why stdout printed to this file is prepended with `;` to be line comments."
+clj꞉user꞉> 
+; Jack-in done.
+clj꞉user꞉> 
+; Evaluating file: example.clj
+; start :Village
+; end :Province
+; Queue: #object[clojure.lang.PersistentQueue 0x26351592 clojure.lang.PersistentQueue@b4d15147]
+; Visited: #{:Village}
+; Path: [:Village]
+; Current: :Village
+; Neighbors: (:RuralCounty)
+; start :Village
+; end :Province
+; Queue: #object[clojure.lang.PersistentQueue 0x19065a6b clojure.lang.PersistentQueue@5f8f5fde]
+; Visited: #{:Village :RuralCounty}
+; Path: [:Village :RuralCounty]
+; Current: :RuralCounty
+; Neighbors: (:County)
+; start :Village
+; end :Province
+; Queue: #object[clojure.lang.PersistentQueue 0x755824a1 clojure.lang.PersistentQueue@cf8b90f2]
+; Visited: #{:Village :County :RuralCounty}
+; Path: [:Village :RuralCounty :County]
+; Current: :County
+; Neighbors: (:Province)
+; start :Village
+; end :Province
+; Queue: #object[clojure.lang.PersistentQueue 0x7b4f261d clojure.lang.PersistentQueue@d9028242]
+; Visited: #{:Village :County :RuralCounty :Province}
+; Path: [:Village :RuralCounty :County :Province]
+; Current: :Province
+; path [:Village :RuralCounty :County :Province]
+; (#notebooks.example.JoinStep{:function :tablecloth.api/inner-join, :left-dataset Village, :right-dataset RuralCounty, :on [{:left-column :rural_county_code, :right-column :rural_county_code}]} #notebooks.example.JoinStep{:function :tablecloth.api/inner-join, :left-dataset RuralCounty, :right-dataset County, :on [{:left-column :county_code, :right-column :county_code}]} #notebooks.example.JoinStep{:function :tablecloth.api/inner-join, :left-dataset County, :right-dataset Province, :on [{:left-column :province_code, :right-column :province_code}]})
+nil
+clj꞉notebooks.example꞉> 
+(println (get-join-path datasets :village_name :province_name))
+; start :Village
+; end :Province
+; Queue: #object[clojure.lang.PersistentQueue 0x77b5a0cb clojure.lang.PersistentQueue@b4d15147]
+; Visited: #{:Village}
+; Path: [:Village]
+; Current: :Village
+; Neighbors: (:RuralCounty)
+; start :Village
+; end :Province
+; Queue: #object[clojure.lang.PersistentQueue 0x7e55f69f clojure.lang.PersistentQueue@5f8f5fde]
+; Visited: #{:Village :RuralCounty}
+; Path: [:Village :RuralCounty]
+; Current: :RuralCounty
+; Neighbors: (:County)
+; start :Village
+; end :Province
+; Queue: #object[clojure.lang.PersistentQueue 0x1498b72 clojure.lang.PersistentQueue@cf8b90f2]
+; Visited: #{:Village :County :RuralCounty}
+; Path: [:Village :RuralCounty :County]
+; Current: :County
+; Neighbors: (:Province)
+; start :Village
+; end :Province
+; Queue: #object[clojure.lang.PersistentQueue 0x7a682359 clojure.lang.PersistentQueue@d9028242]
+; Visited: #{:Village :County :RuralCounty :Province}
+; Path: [:Village :RuralCounty :County :Province]
+; Current: :Province
+; path [:Village :RuralCounty :County :Province]
+; (#notebooks.example.JoinStep{:function :tablecloth.api/inner-join, :left-dataset Village, :right-dataset RuralCounty, :on [{:left-column :rural_county_code, :right-column :rural_county_code}]} #notebooks.example.JoinStep{:function :tablecloth.api/inner-join, :left-dataset RuralCounty, :right-dataset County, :on [{:left-column :county_code, :right-column :county_code}]} #notebooks.example.JoinStep{:function :tablecloth.api/inner-join, :left-dataset County, :right-dataset Province, :on [{:left-column :province_code, :right-column :province_code}]})
+nil
+clj꞉notebooks.example꞉> 
+(defn get-join-path [datasets-map start-col end-col]
+  (let [datasets (map (fn [[k v]]
+                        (->Dataset k
+                                   (set (keys (:columns v)))
+                                   (:foreign-keys v)))
+                      datasets-map)
+        session (-> (mk-session 'notebooks.example :cache false)
+                    (insert-all datasets)
+                    (insert (->ColumnQuery start-col end-col))
+                    fire-rules)
+
+        connection (:?result (first (query session get-connection)))
+        graph (build-join-graph datasets)
+        path (find-join-sequence graph
+                                 (:name (:start-dataset connection))
+                                 (:name (:end-dataset connection)))
+        _ (println "path" path)]
+    (when-let [steps (generate-steps datasets-map path)
+               ]
+      (-> session
+          (insert-all steps)
+          fire-rules
+          (query get-join-steps)
+          ;first
+          ;:?steps
+            ))))
+#'notebooks.example/get-join-path
+clj꞉notebooks.example꞉> 
+(defrule create-join-step
+  {:salience -10}
+  [?step <- JoinStep]
+  [:not [JoinStep (= ?step this)]] ; Ensure the fact is not already present
+  =>
+  (do
+    (println "Inserting step:" ?step)
+    (insert! ?step)))
+#'notebooks.example/create-join-step
+clj꞉notebooks.example꞉> 
+(defn get-join-path [datasets-map start-col end-col]
+  (let [datasets (map (fn [[k v]]
+                        (->Dataset k
+                                   (set (keys (:columns v)))
+                                   (:foreign-keys v)))
+                      datasets-map)
+        session (-> (mk-session 'notebooks.example :cache false)
+                    (insert-all datasets)
+                    (insert (->ColumnQuery start-col end-col))
+                    fire-rules)
+
+        connection (:?result (first (query session get-connection)))
+        graph (build-join-graph datasets)
+        path (find-join-sequence graph
+                                 (:name (:start-dataset connection))
+                                 (:name (:end-dataset connection)))
+        _ (println "path" path)]
+    (when-let [steps (generate-steps datasets-map path)
+               ]
+      (-> session
+          (insert-all steps)
+          fire-rules
+          (query get-join-steps)
+          ;first
+          ;:?steps
+            ))))
+#'notebooks.example/get-join-path
+clj꞉notebooks.example꞉> 
+(println (get-join-path datasets :village_name :province_name))
+; start :Village
+; end :Province
+; Queue: #object[clojure.lang.PersistentQueue 0x4e15e07 clojure.lang.PersistentQueue@b4d15147]
+; Visited: #{:Village}
+; Path: [:Village]
+; Current: :Village
+; Neighbors: (:RuralCounty)
+; start :Village
+; end :Province
+; Queue: #object[clojure.lang.PersistentQueue 0x73f16db6 clojure.lang.PersistentQueue@5f8f5fde]
+; Visited: #{:Village :RuralCounty}
+; Path: [:Village :RuralCounty]
+; Current: :RuralCounty
+; Neighbors: (:County)
+; start :Village
+; end :Province
+; Queue: #object[clojure.lang.PersistentQueue 0x1421a6b clojure.lang.PersistentQueue@cf8b90f2]
+; Visited: #{:Village :County :RuralCounty}
+; Path: [:Village :RuralCounty :County]
+; Current: :County
+; Neighbors: (:Province)
+; start :Village
+; end :Province
+; Queue: #object[clojure.lang.PersistentQueue 0x2d358567 clojure.lang.PersistentQueue@d9028242]
+; Visited: #{:Village :County :RuralCounty :Province}
+; Path: [:Village :RuralCounty :County :Province]
+; Current: :Province
+; path [:Village :RuralCounty :County :Province]
+; ()
+nil
+clj꞉notebooks.example꞉> 
+(defn get-join-path [datasets-map start-col end-col]
+  (let [datasets (map (fn [[k v]]
+                        (->Dataset k
+                                   (set (keys (:columns v)))
+                                   (:foreign-keys v)))
+                      datasets-map)
+        session (-> (mk-session 'notebooks.example :cache false)
+                    (insert-all datasets)
+                    (insert (->ColumnQuery start-col end-col))
+                    fire-rules)
+
+        connection (:?result (first (query session get-connection)))
+        graph (build-join-graph datasets)
+        path (find-join-sequence graph
+                                 (:name (:start-dataset connection))
+                                 (:name (:end-dataset connection)))
+        _ (println "path" path)]
+    (when-let [steps (generate-steps datasets-map path)
+               ]
+      (println steps)
+      (-> session
+          (insert-all steps)
+          fire-rules
+          (query get-join-steps)
+          ;first
+          ;:?steps
+            ))))
+#'notebooks.example/get-join-path
+clj꞉notebooks.example꞉> 
+(println (get-join-path datasets :village_name :province_name))
+; start :Village
+; end :Province
+; Queue: #object[clojure.lang.PersistentQueue 0x5d8ac394 clojure.lang.PersistentQueue@b4d15147]
+; Visited: #{:Village}
+; Path: [:Village]
+; Current: :Village
+; Neighbors: (:RuralCounty)
+; start :Village
+; end :Province
+; Queue: #object[clojure.lang.PersistentQueue 0x6c1f7634 clojure.lang.PersistentQueue@5f8f5fde]
+; Visited: #{:Village :RuralCounty}
+; Path: [:Village :RuralCounty]
+; Current: :RuralCounty
+; Neighbors: (:County)
+; start :Village
+; end :Province
+; Queue: #object[clojure.lang.PersistentQueue 0x5599d0cc clojure.lang.PersistentQueue@cf8b90f2]
+; Visited: #{:Village :County :RuralCounty}
+; Path: [:Village :RuralCounty :County]
+; Current: :County
+; Neighbors: (:Province)
+; start :Village
+; end :Province
+; Queue: #object[clojure.lang.PersistentQueue 0x899b851 clojure.lang.PersistentQueue@d9028242]
+; Visited: #{:Village :County :RuralCounty :Province}
+; Path: [:Village :RuralCounty :County :Province]
+; Current: :Province
+; path [:Village :RuralCounty :County :Province]
+; (#notebooks.example.JoinStep{:function :tablecloth.api/inner-join, :left-dataset Village, :right-dataset RuralCounty, :on [{:left-column :rural_county_code, :right-column :rural_county_code}]} #notebooks.example.JoinStep{:function :tablecloth.api/inner-join, :left-dataset RuralCounty, :right-dataset County, :on [{:left-column :county_code, :right-column :county_code}]} #notebooks.example.JoinStep{:function :tablecloth.api/inner-join, :left-dataset County, :right-dataset Province, :on [{:left-column :province_code, :right-column :province_code}]})
+; ()
+nil
+clj꞉notebooks.example꞉> 
+(defn get-join-path [datasets-map start-col end-col]
+  (let [datasets (map (fn [[k v]]
+                        (->Dataset k
+                                   (set (keys (:columns v)))
+                                   (:foreign-keys v)))
+                      datasets-map)
+        session (-> (mk-session 'notebooks.example :cache false)
+                    (insert-all datasets)
+                    (insert (->ColumnQuery start-col end-col))
+                    fire-rules)
+
+        connection (:?result (first (query session get-connection)))
+        graph (build-join-graph datasets)
+        path (find-join-sequence graph
+                                 (:name (:start-dataset connection))
+                                 (:name (:end-dataset connection)))
+        _ (println "path" path)]
+    (when-let [steps (generate-steps datasets-map path)
+               ]
+      (println steps)
+      (-> session
+          (insert-all steps)
+          fire-rules
+          ;(query get-join-steps)
+          ;first
+          ;:?steps
+            ))))
+#'notebooks.example/get-join-path
+clj꞉notebooks.example꞉> 
+(println (get-join-path datasets :village_name :province_name))
+; start :Village
+; end :Province
+; Queue: #object[clojure.lang.PersistentQueue 0x4b6aaad7 clojure.lang.PersistentQueue@b4d15147]
+; Visited: #{:Village}
+; Path: [:Village]
+; Current: :Village
+; Neighbors: (:RuralCounty)
+; start :Village
+; end :Province
+; Queue: #object[clojure.lang.PersistentQueue 0x38326790 clojure.lang.PersistentQueue@5f8f5fde]
+; Visited: #{:Village :RuralCounty}
+; Path: [:Village :RuralCounty]
+; Current: :RuralCounty
+; Neighbors: (:County)
+; start :Village
+; end :Province
+; Queue: #object[clojure.lang.PersistentQueue 0x32ca2068 clojure.lang.PersistentQueue@cf8b90f2]
+; Visited: #{:Village :County :RuralCounty}
+; Path: [:Village :RuralCounty :County]
+; Current: :County
+; Neighbors: (:Province)
+; start :Village
+; end :Province
+; Queue: #object[clojure.lang.PersistentQueue 0x37883653 clojure.lang.PersistentQueue@d9028242]
+; Visited: #{:Village :County :RuralCounty :Province}
+; Path: [:Village :RuralCounty :County :Province]
+; Current: :Province
+; path [:Village :RuralCounty :County :Province]
+; (#notebooks.example.JoinStep{:function :tablecloth.api/inner-join, :left-dataset Village, :right-dataset RuralCounty, :on [{:left-column :rural_county_code, :right-column :rural_county_code}]} #notebooks.example.JoinStep{:function :tablecloth.api/inner-join, :left-dataset RuralCounty, :right-dataset County, :on [{:left-column :county_code, :right-column :county_code}]} #notebooks.example.JoinStep{:function :tablecloth.api/inner-join, :left-dataset County, :right-dataset Province, :on [{:left-column :province_code, :right-column :province_code}]})
+; #object[clara.rules.engine.LocalSession 0x29aa0e67 clara.rules.engine.LocalSession@29aa0e67]
+nil
+clj꞉notebooks.example꞉> 
+(defn get-join-path [datasets-map start-col end-col]
+  (let [datasets (map (fn [[k v]]
+                        (->Dataset k
+                                   (set (keys (:columns v)))
+                                   (:foreign-keys v)))
+                      datasets-map)
+        session (-> (mk-session 'notebooks.example :cache false)
+                    (insert-all datasets)
+                    (insert (->ColumnQuery start-col end-col))
+                    fire-rules)
+
+        connection (:?result (first (query session get-connection)))
+        graph (build-join-graph datasets)
+        path (find-join-sequence graph
+                                 (:name (:start-dataset connection))
+                                 (:name (:end-dataset connection)))
+        _ (println "path" path)]
+    (when-let [steps (generate-steps datasets-map path)
+               ]
+      (println steps)
+      (-> session
+          (insert-all steps)
+          fire-rules
+          (query get-join-steps)
+          ;first
+          ;:?steps
+            ))))
+#'notebooks.example/get-join-path
+clj꞉notebooks.example꞉> 
+(println (get-join-path datasets :village_name :province_name))
+; start :Village
+; end :Province
+; Queue: #object[clojure.lang.PersistentQueue 0x59657428 clojure.lang.PersistentQueue@b4d15147]
+; Visited: #{:Village}
+; Path: [:Village]
+; Current: :Village
+; Neighbors: (:RuralCounty)
+; start :Village
+; end :Province
+; Queue: #object[clojure.lang.PersistentQueue 0x2ee5e007 clojure.lang.PersistentQueue@5f8f5fde]
+; Visited: #{:Village :RuralCounty}
+; Path: [:Village :RuralCounty]
+; Current: :RuralCounty
+; Neighbors: (:County)
+; start :Village
+; end :Province
+; Queue: #object[clojure.lang.PersistentQueue 0x5f560a25 clojure.lang.PersistentQueue@cf8b90f2]
+; Visited: #{:Village :County :RuralCounty}
+; Path: [:Village :RuralCounty :County]
+; Current: :County
+; Neighbors: (:Province)
+; start :Village
+; end :Province
+; Queue: #object[clojure.lang.PersistentQueue 0x4eb76788 clojure.lang.PersistentQueue@d9028242]
+; Visited: #{:Village :County :RuralCounty :Province}
+; Path: [:Village :RuralCounty :County :Province]
+; Current: :Province
+; path [:Village :RuralCounty :County :Province]
+; (#notebooks.example.JoinStep{:function :tablecloth.api/inner-join, :left-dataset Village, :right-dataset RuralCounty, :on [{:left-column :rural_county_code, :right-column :rural_county_code}]} #notebooks.example.JoinStep{:function :tablecloth.api/inner-join, :left-dataset RuralCounty, :right-dataset County, :on [{:left-column :county_code, :right-column :county_code}]} #notebooks.example.JoinStep{:function :tablecloth.api/inner-join, :left-dataset County, :right-dataset Province, :on [{:left-column :province_code, :right-column :province_code}]})
+; ()
+nil
+clj꞉notebooks.example꞉> 
