@@ -12,3 +12,15 @@ pom.xml.asc
 .lein-failures
 .nrepl-port
 .cpcache/
+.env
+.calva/output-window/output.calva-repl
+.clj-kondo/
+/.clj-kondo/*
+.calva/output-window/output.calva-repl
+/.lsp/
+/.lsp/*
+/.lsp/metadata
+/.lsp/metadata/*
+/.lsp/metadata/.gitkeep
+.lsp/.cache/db.transit.json
+.clj-kondo/.cache/v1/clj/clojure.set.transit.json

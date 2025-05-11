@@ -54,6 +54,8 @@
   (:require [tablecloth.api :as tc]
             [tech.v3.datatype.functional :as dfn]
             [clara.rules :refer :all]
+            [clara.rules.accumulators :as acc]
+            [config.core :refer [env]]
             [clojure.set :as set]))</code></pre></div></div><div style="margin:15px;"><div><pre><code class="sourceCode language-clojure source-clojure bg-light">(defrecord Dataset [name columns foreign-keys])</code></pre></div></div><div style="margin:15px;"><div><pre><code class="sourceCode language-clojure source-clojure bg-light">(defrecord ColumnQuery [start-col end-col])</code></pre></div></div><div style="margin:15px;"><div><pre><code class="sourceCode language-clojure source-clojure bg-light">(defrecord JoinStep [function left-dataset right-dataset on])</code></pre></div></div><div style="margin:15px;"><div><pre><code class="sourceCode language-clojure source-clojure bg-light">(defrecord ConnectionResult [start-dataset end-dataset])</code></pre></div></div><div style="margin:15px;"><div><pre><code class="sourceCode language-clojure source-clojure bg-light">(defn has-column? [columns col]
   (some #{col} columns))</code></pre></div></div><div style="margin:15px;"><div><pre><code class="sourceCode language-clojure source-clojure bg-light">(defrule find-column-datasets
   [ColumnQuery (= ?start-col start-col) (= ?end-col end-col)]
@@ -64,13 +66,14 @@
 </code></pre></div></div><div style="margin:15px;"><div><pre><code class="sourceCode language-clojure source-clojure bg-light">(defquery get-connection []
   [?result &lt;- ConnectionResult])</code></pre></div></div><div style="margin:15px;"><div><pre><code class="sourceCode language-clojure printed-clojure">#&apos;notebooks.example/get-connection
 </code></pre></div></div><div style="margin:15px;"><div><pre><code class="sourceCode language-clojure source-clojure bg-light">(defrule create-join-step
-  #_{:salience -10} 
+  {:salience -10}
   [?step &lt;- JoinStep]
+  [:not [JoinStep (= ?step this)]] ; Ensure the fact is not already present
   =&gt;
-  (insert! ?step))</code></pre></div></div><div style="margin:15px;"><div><pre><code class="sourceCode language-clojure printed-clojure">#&apos;notebooks.example/create-join-step
+  (do
+    (insert! ?step)))</code></pre></div></div><div style="margin:15px;"><div><pre><code class="sourceCode language-clojure printed-clojure">#&apos;notebooks.example/create-join-step
 </code></pre></div></div><div style="margin:15px;"><div><pre><code class="sourceCode language-clojure source-clojure bg-light">(defquery get-join-steps []
-  [:?steps]  
-  [?steps &lt;- (accumulate :all :from [JoinStep])])</code></pre></div></div><div style="margin:15px;"><div><pre><code class="sourceCode language-clojure printed-clojure">#&apos;notebooks.example/get-join-steps
+  [?steps &lt;- (acc/all) :from [JoinStep]])</code></pre></div></div><div style="margin:15px;"><div><pre><code class="sourceCode language-clojure printed-clojure">#&apos;notebooks.example/get-join-steps
 </code></pre></div></div><div style="margin:15px;"><div><pre><code class="sourceCode language-clojure source-clojure bg-light">(defn build-join-graph [datasets]
   (reduce (fn [graph {:keys [name foreign-keys]}]
             (assoc graph 
@@ -80,21 +83,14 @@
           datasets))</code></pre></div></div><div style="margin:15px;"><div><pre><code class="sourceCode language-clojure source-clojure bg-light">(defn find-join-sequence [graph start end]
   (loop [queue (conj clojure.lang.PersistentQueue/EMPTY [start])
          visited #{start}]
-    (println &quot;start&quot; start)
-    (println &quot;end&quot; end)
-    (println &quot;Queue:&quot; queue)
-    (println &quot;Visited:&quot; visited)
     (when-not (empty? queue)
       (let [path (peek queue)
             current (last path)]
-        (println &quot;Path:&quot; path)
-        (println &quot;Current:&quot; current)
         (cond
           (= current end) path 
           :else
           (let [neighbors (remove visited (get graph current []))
                 new-paths (map #(conj path %) neighbors)]
-            (println &quot;Neighbors:&quot; neighbors)
             (recur (into (pop queue) new-paths)
                    (into visited neighbors))))))))</code></pre></div></div><div style="margin:15px;"><div><pre><code class="sourceCode language-clojure source-clojure bg-light">(defn generate-steps [datasets path]
   (when (seq path)
@@ -108,7 +104,13 @@
                     (name left)
                     (name right)
                     [{:left-column (:left-col fk)
-                      :right-column (:right-col fk)}])))))</code></pre></div></div><div style="margin:15px;"><div><pre><code class="sourceCode language-clojure source-clojure bg-light">(defn get-join-path [datasets-map start-col end-col]
+                      :right-column (:right-col fk)}])))))</code></pre></div></div><div style="margin:15px;"><div><pre><code class="sourceCode language-clojure source-clojure bg-light">(defn nest-join-steps [steps]
+  (reduce (fn [nested step]
+            (if (nil? nested)
+              step
+              (assoc step :left-dataset nested)))
+          nil
+          steps))</code></pre></div></div><div style="margin:15px;"><div><pre><code class="sourceCode language-clojure source-clojure bg-light">(defn get-join-path [datasets-map start-col end-col]
   (let [datasets (map (fn [[k v]]
                         (-&gt;Dataset k
                                    (set (keys (:columns v)))
@@ -123,18 +125,15 @@
         graph (build-join-graph datasets)
         path (find-join-sequence graph
                                  (:name (:start-dataset connection))
-                                 (:name (:end-dataset connection)))
-        _ (println &quot;path&quot; path)]
-    (when-let [steps (generate-steps datasets-map path)
-               ]
-        
-      #_(-&gt; session
+                                 (:name (:end-dataset connection)))]
+    (when-let [steps (generate-steps datasets-map path)]
+               
+      (-&gt; session
           (insert-all steps)
           fire-rules
-          ;(query get-join-steps)
-          ;first
-          ;:?steps
-            ))))</code></pre></div></div><div style="margin:15px;"><div><pre><code class="sourceCode language-clojure source-clojure bg-light">(def datasets
+          (query get-join-steps)
+          first
+          :?steps))))</code></pre></div></div><div style="margin:15px;"><div><pre><code class="sourceCode language-clojure source-clojure bg-light">(def datasets
   {:Village {:columns {:village_name :text, :village_code :text, :rural_county_code :text}
              :foreign-keys {:rural_county_code {:dataset :RuralCounty 
                                                 :column :rural_county_code}}}
@@ -145,7 +144,54 @@
             :foreign-keys {:province_code {:dataset :Province 
                                            :column :province_code}}}
    :Province {:columns {:province_name :text, :province_code :text}
-              :foreign-keys {}}})</code></pre></div></div><div style="margin:15px;"><div><pre><code class="sourceCode language-clojure source-clojure bg-light">(def steps (get-join-path datasets :village_name :province_name))</code></pre></div></div><div style="margin:15px;"><div style="background-color:grey;height:2px;width:100%;"></div></div><div style="margin:15px;"><div></div></div></div></div></div></div></div><script type="text/javascript">/*!
+              :foreign-keys {}}})</code></pre></div></div><div style="margin:15px;"><div><pre><code class="sourceCode language-clojure source-clojure bg-light">(def mock-datasets
+    {:Village (tc/dataset {:village_name [&quot;VillageA&quot; &quot;VillageB&quot;]
+                           :village_code [&quot;V001&quot; &quot;V002&quot;]
+                           :rural_county_code [&quot;RC001&quot; &quot;RC002&quot;]})
+     :RuralCounty (tc/dataset {:rural_county_name [&quot;RuralCountyA&quot; &quot;RuralCountyB&quot;]
+                               :rural_county_code [&quot;RC001&quot; &quot;RC002&quot;]
+                               :county_code [&quot;C001&quot; &quot;C002&quot;]})
+     :County (tc/dataset {:county_name [&quot;CountyA&quot; &quot;CountyB&quot;]
+                          :county_code [&quot;C001&quot; &quot;C002&quot;]
+                          :province_code [&quot;P001&quot; &quot;P002&quot;]})
+     :Province (tc/dataset {:province_name [&quot;ProvinceA&quot; &quot;ProvinceB&quot;]
+                            :province_code [&quot;P001&quot; &quot;P002&quot;]})})</code></pre></div></div><div style="margin:15px;"><div><pre><code class="sourceCode language-clojure source-clojure bg-light">(defn get-fn [ns-fn-key]
+   (let [ns-name (namespace ns-fn-key)
+         fn-name (name ns-fn-key)]
+     (ns-resolve (symbol ns-name) (symbol fn-name))))</code></pre></div></div><div style="margin:15px;"><div><pre><code class="sourceCode language-clojure source-clojure bg-light">(defn inner-join [ds1 ds2 left-column right-column]
+  (tc/inner-join ds1 ds2  {:left-columns [left-column]
+                           :right-columns [right-column]}))</code></pre></div></div><div style="margin:15px;"><div><pre><code class="sourceCode language-clojure source-clojure bg-light">(defn get-dataset-by-name [name] ((keyword name) mock-datasets) )</code></pre></div></div><div style="margin:15px;"><div><pre><code class="sourceCode language-clojure source-clojure bg-light">(defn do-inner-join [query-map]
+  (let [left-dataset (:left-dataset query-map)
+        ds1 (if (string? left-dataset)
+              (get-dataset-by-name left-dataset)
+              left-dataset
+              )
+        ds2 (get-dataset-by-name (:right-dataset query-map))
+        on-array (first (:on query-map))
+        left-column (get on-array :left-column)
+        right-column (get on-array :right-column)]
+    ;(println query-map)
+    ;(println ds1)
+    ;(println ds2)
+    ;(println left-column)
+    ;(println right-column)
+    (inner-join ds2 ds1 right-column left-column )))</code></pre></div></div><div style="margin:15px;"><div><pre><code class="sourceCode language-clojure source-clojure bg-light">(nest-join-steps
+ (get-join-path datasets :village_code :province_code))</code></pre></div></div><div style="margin:15px;"><div><pre><code class="sourceCode language-clojure printed-clojure">{:function :tablecloth.api/inner-join,
+ :left-dataset
+ {:function :tablecloth.api/inner-join,
+  :left-dataset &quot;Village&quot;,
+  :right-dataset &quot;RuralCounty&quot;,
+  :on
+  [{:left-column :rural_county_code,
+    :right-column :rural_county_code}]},
+ :right-dataset &quot;County&quot;,
+ :on [{:left-column :county_code, :right-column :county_code}]}
+</code></pre></div></div><div style="margin:15px;"><div><pre><code class="sourceCode language-clojure source-clojure bg-light">(defn get-results [column1 column2]
+  (clojure.walk/postwalk #(do (if (and (map? %) (not (nil? (:function %))))
+                                (do-inner-join %)
+                                %)) (nest-join-steps
+                                     (get-join-path datasets column1 column2))))</code></pre></div></div><div style="margin:15px;"><div><pre><code class="sourceCode language-clojure source-clojure bg-light">(get-results :village_code :province_code)</code></pre></div></div><div style="margin:15px;"><div class="clay-dataset"><p>inner-join [8 9]:</p><table class="table"><thead><tr><th>:county_name</th><th>:county_code</th><th>:province_code</th><th>:rural_county_name</th><th>:rural_county_code</th><th>:inner-join.county_code</th><th>:village_name</th><th>:village_code</th><th>:right.rural_county_code</th></tr></thead><tbody><tr><td>CountyA</td><td>C001</td><td>P001</td><td>RuralCountyA</td><td>RC001</td><td>C001</td><td>VillageA</td><td>V001</td><td>RC001</td></tr><tr><td>CountyB</td><td>C002</td><td>P002</td><td>RuralCountyA</td><td>RC001</td><td>C001</td><td>VillageA</td><td>V001</td><td>RC001</td></tr><tr><td>CountyA</td><td>C001</td><td>P001</td><td>RuralCountyB</td><td>RC002</td><td>C002</td><td>VillageA</td><td>V001</td><td>RC001</td></tr><tr><td>CountyB</td><td>C002</td><td>P002</td><td>RuralCountyB</td><td>RC002</td><td>C002</td><td>VillageA</td><td>V001</td><td>RC001</td></tr><tr><td>CountyA</td><td>C001</td><td>P001</td><td>RuralCountyA</td><td>RC001</td><td>C001</td><td>VillageB</td><td>V002</td><td>RC002</td></tr><tr><td>CountyB</td><td>C002</td><td>P002</td><td>RuralCountyA</td><td>RC001</td><td>C001</td><td>VillageB</td><td>V002</td><td>RC002</td></tr><tr><td>CountyA</td><td>C001</td><td>P001</td><td>RuralCountyB</td><td>RC002</td><td>C002</td><td>VillageB</td><td>V002</td><td>RC002</td></tr><tr><td>CountyB</td><td>C002</td><td>P002</td><td>RuralCountyB</td><td>RC002</td><td>C002</td><td>VillageB</td><td>V002</td><td>RC002</td></tr></tbody></table></div></div><div style="margin:15px;"><div><pre><code class="sourceCode language-clojure source-clojure bg-light">(println env)</code></pre></div></div><div style="margin:15px;"><div><pre><code class="sourceCode language-clojure printed-clojure">nil
+</code></pre></div></div><div style="margin:15px;"><div style="background-color:grey;height:2px;width:100%;"></div></div><div style="margin:15px;"><div></div></div></div></div></div></div></div><script type="text/javascript">/*!
   Highlight.js v11.9.0 (git: b7ec4bfafc)
   (c) 2006-2023 undefined and other contributors
   License: BSD-3-Clause

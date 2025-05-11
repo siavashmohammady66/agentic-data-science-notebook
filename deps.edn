@@ -3,6 +3,8 @@
         scicloj/tablecloth {:mvn/version "7.042"}
         org.slf4j/slf4j-api {:mvn/version "2.0.9"}
         ch.qos.logback/logback-classic {:mvn/version "1.4.11"}
-        com.cerner/clara-rules {:mvn/version "0.24.0"}}
+        com.cerner/clara-rules {:mvn/version "0.24.0"}
+        yogthos/config {:mvn/version "1.2.1"}
+        http-kit/http-kit {:mvn/version "2.8.0"}}
  :paths ["src" "notebooks"]}
 

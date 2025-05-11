@@ -2,6 +2,8 @@
   (:require [tablecloth.api :as tc]
             [tech.v3.datatype.functional :as dfn]
             [clara.rules :refer :all]
+            [clara.rules.accumulators :as acc]
+            [config.core :refer [env]]
             [clojure.set :as set]))
 
 (defrecord Dataset [name columns foreign-keys])
@@ -30,12 +32,10 @@
   [:not [JoinStep (= ?step this)]] ; Ensure the fact is not already present
   =>
   (do
-    (println "Inserting step:" ?step)
     (insert! ?step)))
 
 (defquery get-join-steps []
-  [:?steps]  
-  [?steps <- (accumulate :all :from [JoinStep])])  
+  [?steps <- (acc/all) :from [JoinStep]])
 
 (defn build-join-graph [datasets]
   (reduce (fn [graph {:keys [name foreign-keys]}]
@@ -48,21 +48,14 @@
 (defn find-join-sequence [graph start end]
   (loop [queue (conj clojure.lang.PersistentQueue/EMPTY [start])
          visited #{start}]
-    (println "start" start)
-    (println "end" end)
-    (println "Queue:" queue)
-    (println "Visited:" visited)
     (when-not (empty? queue)
       (let [path (peek queue)
             current (last path)]
-        (println "Path:" path)
-        (println "Current:" current)
         (cond
           (= current end) path 
           :else
           (let [neighbors (remove visited (get graph current []))
                 new-paths (map #(conj path %) neighbors)]
-            (println "Neighbors:" neighbors)
             (recur (into (pop queue) new-paths)
                    (into visited neighbors))))))))
 
@@ -81,6 +74,15 @@
                       :right-column (:right-col fk)}])))))
 
 
+(defn nest-join-steps [steps]
+  (reduce (fn [nested step]
+            (if (nil? nested)
+              step
+              (assoc step :left-dataset nested)))
+          nil
+          steps))
+
+
 (defn get-join-path [datasets-map start-col end-col]
   (let [datasets (map (fn [[k v]]
                         (->Dataset k
@@ -96,18 +98,15 @@
         graph (build-join-graph datasets)
         path (find-join-sequence graph
                                  (:name (:start-dataset connection))
-                                 (:name (:end-dataset connection)))
-        _ (println "path" path)]
-    (when-let [steps (generate-steps datasets-map path)
-               ]
-      (println steps)
+                                 (:name (:end-dataset connection)))]
+    (when-let [steps (generate-steps datasets-map path)]
+               
       (-> session
           (insert-all steps)
           fire-rules
           (query get-join-steps)
-          ;first
-          ;:?steps
-            ))))
+          first
+          :?steps))))
 
 (def datasets
   {:Village {:columns {:village_name :text, :village_code :text, :rural_county_code :text}
@@ -122,4 +121,59 @@
    :Province {:columns {:province_name :text, :province_code :text}
               :foreign-keys {}}})
 
-(println (get-join-path datasets :village_name :province_name))
+  (def mock-datasets
+    {:Village (tc/dataset {:village_name ["VillageA" "VillageB"]
+                           :village_code ["V001" "V002"]
+                           :rural_county_code ["RC001" "RC002"]})
+     :RuralCounty (tc/dataset {:rural_county_name ["RuralCountyA" "RuralCountyB"]
+                               :rural_county_code ["RC001" "RC002"]
+                               :county_code ["C001" "C002"]})
+     :County (tc/dataset {:county_name ["CountyA" "CountyB"]
+                          :county_code ["C001" "C002"]
+                          :province_code ["P001" "P002"]})
+     :Province (tc/dataset {:province_name ["ProvinceA" "ProvinceB"]
+                            :province_code ["P001" "P002"]})})
+
+
+ (defn get-fn [ns-fn-key]
+   (let [ns-name (namespace ns-fn-key)
+         fn-name (name ns-fn-key)]
+     (ns-resolve (symbol ns-name) (symbol fn-name)))) 
+
+(defn inner-join [ds1 ds2 left-column right-column]
+  (tc/inner-join ds1 ds2  {:left-columns [left-column]
+                           :right-columns [right-column]}))
+ 
+(defn get-dataset-by-name [name] ((keyword name) mock-datasets) )
+
+(defn do-inner-join [query-map]
+  (let [left-dataset (:left-dataset query-map)
+        ds1 (if (string? left-dataset)
+              (get-dataset-by-name left-dataset)
+              left-dataset
+              )
+        ds2 (get-dataset-by-name (:right-dataset query-map))
+        on-array (first (:on query-map))
+        left-column (get on-array :left-column)
+        right-column (get on-array :right-column)]
+    ;(println query-map)
+    ;(println ds1)
+    ;(println ds2)
+    ;(println left-column)
+    ;(println right-column)
+    (inner-join ds2 ds1 right-column left-column )))
+
+
+(nest-join-steps
+ (get-join-path datasets :village_code :province_code))
+
+(defn get-results [column1 column2]
+  (clojure.walk/postwalk #(do (if (and (map? %) (not (nil? (:function %))))
+                                (do-inner-join %)
+                                %)) (nest-join-steps
+                                     (get-join-path datasets column1 column2))))
+
+
+(get-results :village_code :province_code)  
+
+(println env)
