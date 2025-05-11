@@ -1,17 +1,29 @@
+; # Including noj & clara
 (ns notebooks.example
-  (:require [tablecloth.api :as tc]
-            [tech.v3.datatype.functional :as dfn]
-            [clara.rules :refer :all]
-            [clara.rules.accumulators :as acc]
-            [config.core :refer [env]]
-            [clojure.set :as set]))
+  (:require
+    [clara.rules :refer :all]
+    [clara.rules.accumulators :as acc]
+    [clojure.set :as set]
+    [clojure.walk :as walk]
+    [config.core :refer [env]]
+    [tablecloth.api :as tc]
+    [tech.v3.datatype.functional :as dfn]))
+; # Defining clara rule engine
+; ## Defining clara records
+(defrecord Dataset
+  [name columns foreign-keys])
 
-(defrecord Dataset [name columns foreign-keys])
-(defrecord ColumnQuery [start-col end-col])
-(defrecord JoinStep [function left-dataset right-dataset on])
-(defrecord ConnectionResult [start-dataset end-dataset])
+(defrecord ColumnQuery
+  [start-col end-col])
 
-(defn has-column? [columns col]
+(defrecord JoinStep
+  [function left-dataset right-dataset on])
+
+(defrecord ConnectionResult
+  [start-dataset end-dataset])
+; ## Defining clara rules
+(defn has-column?
+  [columns col]
   (some #{col} columns))
 
 (defrule find-column-datasets
@@ -19,12 +31,10 @@
   [?start-ds <- Dataset (has-column? columns ?start-col)]
   [?end-ds <- Dataset (has-column? columns ?end-col)]
   =>
-  (insert! (->ConnectionResult ?start-ds ?end-ds))) 
-
+  (insert! (->ConnectionResult ?start-ds ?end-ds)))
 
 (defquery get-connection []
   [?result <- ConnectionResult])
-
 
 (defrule create-join-step
   {:salience -10}
@@ -37,29 +47,32 @@
 (defquery get-join-steps []
   [?steps <- (acc/all) :from [JoinStep]])
 
-(defn build-join-graph [datasets]
+(defn build-join-graph
+  [datasets]
   (reduce (fn [graph {:keys [name foreign-keys]}]
-            (assoc graph 
-                   name 
+            (assoc graph
+                   name
                    (set (map (comp :dataset val) foreign-keys))))
           {}
           datasets))
 
-(defn find-join-sequence [graph start end]
+(defn find-join-sequence
+  [graph start end]
   (loop [queue (conj clojure.lang.PersistentQueue/EMPTY [start])
          visited #{start}]
     (when-not (empty? queue)
       (let [path (peek queue)
             current (last path)]
         (cond
-          (= current end) path 
+          (= current end) path
           :else
           (let [neighbors (remove visited (get graph current []))
                 new-paths (map #(conj path %) neighbors)]
             (recur (into (pop queue) new-paths)
                    (into visited neighbors))))))))
 
-(defn generate-steps [datasets path]
+(defn generate-steps
+  [datasets path]
   (when (seq path)
     (for [[left right] (partition 2 1 path)]
       (let [fk (->> (get-in datasets [left :foreign-keys])
@@ -73,17 +86,17 @@
                     [{:left-column (:left-col fk)
                       :right-column (:right-col fk)}])))))
 
-
-(defn nest-join-steps [steps]
+(defn nest-join-steps
+  [steps]
   (reduce (fn [nested step]
             (if (nil? nested)
               step
               (assoc step :left-dataset nested)))
           nil
           steps))
-
-
-(defn get-join-path [datasets-map start-col end-col]
+; ## Defining clara session
+(defn get-join-path
+  [datasets-map start-col end-col]
   (let [datasets (map (fn [[k v]]
                         (->Dataset k
                                    (set (keys (:columns v)))
@@ -100,80 +113,80 @@
                                  (:name (:start-dataset connection))
                                  (:name (:end-dataset connection)))]
     (when-let [steps (generate-steps datasets-map path)]
-               
+
       (-> session
           (insert-all steps)
           fire-rules
           (query get-join-steps)
           first
           :?steps))))
-
+; # Mock datasets
+; ## Defining mock datasets schema
 (def datasets
   {:Village {:columns {:village_name :text, :village_code :text, :rural_county_code :text}
-             :foreign-keys {:rural_county_code {:dataset :RuralCounty 
+             :foreign-keys {:rural_county_code {:dataset :RuralCounty
                                                 :column :rural_county_code}}}
    :RuralCounty {:columns {:rural_county_name :text, :rural_county_code :text, :county_code :text}
-                 :foreign-keys {:county_code {:dataset :County 
+                 :foreign-keys {:county_code {:dataset :County
                                               :column :county_code}}}
    :County {:columns {:county_name :text, :county_code :text, :province_code :text}
-            :foreign-keys {:province_code {:dataset :Province 
+            :foreign-keys {:province_code {:dataset :Province
                                            :column :province_code}}}
    :Province {:columns {:province_name :text, :province_code :text}
               :foreign-keys {}}})
+; ## Defining mock datasets
+(def mock-datasets
+  {:Village (tc/dataset {:village_name ["VillageA" "VillageB"]
+                         :village_code ["V001" "V002"]
+                         :rural_county_code ["RC001" "RC002"]})
+   :RuralCounty (tc/dataset {:rural_county_name ["RuralCountyA" "RuralCountyB"]
+                             :rural_county_code ["RC001" "RC002"]
+                             :county_code ["C001" "C002"]})
+   :County (tc/dataset {:county_name ["CountyA" "CountyB"]
+                        :county_code ["C001" "C002"]
+                        :province_code ["P001" "P002"]})
+   :Province (tc/dataset {:province_name ["ProvinceA" "ProvinceB"]
+                          :province_code ["P001" "P002"]})})
+; # TableCloth operations
 
-  (def mock-datasets
-    {:Village (tc/dataset {:village_name ["VillageA" "VillageB"]
-                           :village_code ["V001" "V002"]
-                           :rural_county_code ["RC001" "RC002"]})
-     :RuralCounty (tc/dataset {:rural_county_name ["RuralCountyA" "RuralCountyB"]
-                               :rural_county_code ["RC001" "RC002"]
-                               :county_code ["C001" "C002"]})
-     :County (tc/dataset {:county_name ["CountyA" "CountyB"]
-                          :county_code ["C001" "C002"]
-                          :province_code ["P001" "P002"]})
-     :Province (tc/dataset {:province_name ["ProvinceA" "ProvinceB"]
-                            :province_code ["P001" "P002"]})})
 
-
- (defn get-fn [ns-fn-key]
-   (let [ns-name (namespace ns-fn-key)
-         fn-name (name ns-fn-key)]
-     (ns-resolve (symbol ns-name) (symbol fn-name)))) 
-
-(defn inner-join [ds1 ds2 left-column right-column]
+(defn inner-join
+  [ds1 ds2 left-column right-column]
   (tc/inner-join ds1 ds2  {:left-columns [left-column]
                            :right-columns [right-column]}))
- 
-(defn get-dataset-by-name [name] ((keyword name) mock-datasets) )
 
-(defn do-inner-join [query-map]
+(defn get-dataset-by-name
+  [name]
+  ((keyword name) mock-datasets))
+
+(defn do-inner-join
+  [query-map]
   (let [left-dataset (:left-dataset query-map)
         ds1 (if (string? left-dataset)
               (get-dataset-by-name left-dataset)
-              left-dataset
-              )
+              left-dataset)
         ds2 (get-dataset-by-name (:right-dataset query-map))
         on-array (first (:on query-map))
         left-column (get on-array :left-column)
         right-column (get on-array :right-column)]
-    ;(println query-map)
-    ;(println ds1)
-    ;(println ds2)
-    ;(println left-column)
-    ;(println right-column)
-    (inner-join ds2 ds1 right-column left-column )))
+    (inner-join ds2 ds1 right-column left-column)))
 
-
-(nest-join-steps
+#_(nest-join-steps
  (get-join-path datasets :village_code :province_code))
+; ## postwalk joining on whole map (DSL)
+(defn get-results
+  [column1 column2]
+  (walk/postwalk #(do (if (and (map? %) (not (nil? (:function %))))
+                        (do-inner-join %)
+                        %)) (nest-join-steps
+                              (get-join-path datasets column1 column2))))
 
-(defn get-results [column1 column2]
-  (clojure.walk/postwalk #(do (if (and (map? %) (not (nil? (:function %))))
-                                (do-inner-join %)
-                                %)) (nest-join-steps
-                                     (get-join-path datasets column1 column2))))
+#_(get-results :village_code :province_code)
 
-
-(get-results :village_code :province_code)  
-
-(println env)
+#_(println env)
+; # Calling clojure function by :namespace/function keyword style
+(defn get-fn
+  [ns-fn-key]
+  (let [ns-name (namespace ns-fn-key)
+        fn-name (name ns-fn-key)]
+    (ns-resolve (symbol ns-name) (symbol fn-name))))

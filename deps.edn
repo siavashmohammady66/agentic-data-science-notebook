@@ -5,6 +5,7 @@
         ch.qos.logback/logback-classic {:mvn/version "1.4.11"}
         com.cerner/clara-rules {:mvn/version "0.24.0"}
         yogthos/config {:mvn/version "1.2.1"}
+        org.scicloj/noj {:mvn/version "2-beta18"}
         http-kit/http-kit {:mvn/version "2.8.0"}}
  :paths ["src" "notebooks"]}
 
