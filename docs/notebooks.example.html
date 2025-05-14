@@ -157,9 +157,9 @@
                                            :column :province_code}}}
    :Province {:columns {:province_name :text, :province_code :text}
               :foreign-keys {}}})</code></pre></div></div><div style="margin:15px;"><div><h2 id="defining-mock-datasets">Defining mock datasets</h2></div></div><div style="margin:15px;"><div><pre><code class="sourceCode language-clojure source-clojure bg-light">(def mock-datasets
-  {:Village (tc/dataset {:village_name [&quot;VillageA&quot; &quot;VillageB&quot;]
-                         :village_code [&quot;V001&quot; &quot;V002&quot;]
-                         :rural_county_code [&quot;RC001&quot; &quot;RC002&quot;]})
+  {:Village (tc/dataset {:village_name [&quot;VillageA&quot; &quot;VillageB&quot; &quot;VillageC&quot;]
+                         :village_code [&quot;V001&quot; &quot;V002&quot; &quot;V003&quot;]
+                         :rural_county_code [&quot;RC001&quot; &quot;RC002&quot; &quot;RC001&quot;]})
    :RuralCounty (tc/dataset {:rural_county_name [&quot;RuralCountyA&quot; &quot;RuralCountyB&quot;]
                              :rural_county_code [&quot;RC001&quot; &quot;RC002&quot;]
                              :county_code [&quot;C001&quot; &quot;C002&quot;]})
@@ -169,8 +169,11 @@
    :Province (tc/dataset {:province_name [&quot;ProvinceA&quot; &quot;ProvinceB&quot;]
                           :province_code [&quot;P001&quot; &quot;P002&quot;]})})</code></pre></div></div><div style="margin:15px;"><div><h1 id="tablecloth-operations">TableCloth operations</h1></div></div><div style="margin:15px;"><div><pre><code class="sourceCode language-clojure source-clojure bg-light">(defn inner-join
   [ds1 ds2 left-column right-column]
-  (tc/inner-join ds1 ds2  {:left-columns [left-column]
-                           :right-columns [right-column]}))</code></pre></div></div><div style="margin:15px;"><div><pre><code class="sourceCode language-clojure source-clojure bg-light">(defn get-dataset-by-name
+  (tc/inner-join ds1 ds2  {:left left-column
+                           :right right-column}))</code></pre></div></div><div style="margin:15px;"><div><h3 id="example-of-inner-join">example of inner join</h3><h4 id="village-dataset">village dataset</h4></div></div><div style="margin:15px;"><div><pre><code class="sourceCode language-clojure source-clojure bg-light">(tc/dataset (:Village mock-datasets))</code></pre></div></div><div style="margin:15px;"><div class="clay-dataset"><p>_unnamed [3 3]:</p><table class="table"><thead><tr><th>:village_name</th><th>:village_code</th><th>:rural_county_code</th></tr></thead><tbody><tr><td>VillageA</td><td>V001</td><td>RC001</td></tr><tr><td>VillageB</td><td>V002</td><td>RC002</td></tr><tr><td>VillageC</td><td>V003</td><td>RC001</td></tr></tbody></table></div></div><div style="margin:15px;"><div><h4 id="rural-county-dataset">Rural county dataset</h4></div></div><div style="margin:15px;"><div><pre><code class="sourceCode language-clojure source-clojure bg-light">(tc/dataset (:RuralCounty mock-datasets))</code></pre></div></div><div style="margin:15px;"><div class="clay-dataset"><p>_unnamed [2 3]:</p><table class="table"><thead><tr><th>:rural_county_name</th><th>:rural_county_code</th><th>:county_code</th></tr></thead><tbody><tr><td>RuralCountyA</td><td>RC001</td><td>C001</td></tr><tr><td>RuralCountyB</td><td>RC002</td><td>C002</td></tr></tbody></table></div></div><div style="margin:15px;"><div><pre><code class="sourceCode language-clojure source-clojure bg-light">(inner-join
+ (:Village mock-datasets) 
+ (:RuralCounty mock-datasets) 
+ :rural_county_code :rural_county_code)</code></pre></div></div><div style="margin:15px;"><div class="clay-dataset"><p>inner-join [3 5]:</p><table class="table"><thead><tr><th>:rural_county_code</th><th>:village_name</th><th>:village_code</th><th>:rural_county_name</th><th>:county_code</th></tr></thead><tbody><tr><td>RC001</td><td>VillageA</td><td>V001</td><td>RuralCountyA</td><td>C001</td></tr><tr><td>RC001</td><td>VillageC</td><td>V003</td><td>RuralCountyA</td><td>C001</td></tr><tr><td>RC002</td><td>VillageB</td><td>V002</td><td>RuralCountyB</td><td>C002</td></tr></tbody></table></div></div><div style="margin:15px;"><div><pre><code class="sourceCode language-clojure source-clojure bg-light">(defn get-dataset-by-name
   [name]
   ((keyword name) mock-datasets))</code></pre></div></div><div style="margin:15px;"><div><pre><code class="sourceCode language-clojure source-clojure bg-light">(defn do-inner-join
   [query-map]
@@ -182,12 +185,13 @@
         on-array (first (:on query-map))
         left-column (get on-array :left-column)
         right-column (get on-array :right-column)]
-    (inner-join ds2 ds1 right-column left-column)))</code></pre></div></div><div style="margin:15px;"><div><h2 id="postwalk-joining-on-whole-map-(dsl)">postwalk joining on whole map (DSL)</h2></div></div><div style="margin:15px;"><div><pre><code class="sourceCode language-clojure source-clojure bg-light">(defn get-results
+    (inner-join ds2 ds1 right-column left-column)))</code></pre></div></div><div style="margin:15px;"><div><h2 id="postwalk-joining-on-whole-map-(dsl)">postwalk joining on whole map (DSL)</h2></div></div><div style="margin:15px;"><div><pre><code class="sourceCode language-clojure source-clojure bg-light">(defn get-dataset-join-results
   [column1 column2]
   (walk/postwalk #(do (if (and (map? %) (not (nil? (:function %))))
                         (do-inner-join %)
                         %)) (nest-join-steps
-                              (get-join-path datasets column1 column2))))</code></pre></div></div><div style="margin:15px;"><div><h1 id="calling-clojure-function-by-:namespace/function-keyword-style">Calling clojure function by :namespace/function keyword style</h1></div></div><div style="margin:15px;"><div><pre><code class="sourceCode language-clojure source-clojure bg-light">(defn get-fn
+                              (get-join-path datasets column1 column2))))</code></pre></div></div><div style="margin:15px;"><div><h3 id="example-result">Example result</h3></div></div><div style="margin:15px;"><div><pre><code class="sourceCode language-clojure source-clojure bg-light">(get-dataset-join-results :village_code :province_name)</code></pre></div></div><div style="margin:15px;"><div class="clay-dataset"><p>inner-join [3 8]:</p><table class="table"><thead><tr><th>:province_code</th><th>:province_name</th><th>:county_code</th><th>:county_name</th><th>:rural_county_code</th><th>:rural_county_name</th><th>:village_name</th><th>:village_code</th></tr></thead><tbody><tr><td>P001</td><td>ProvinceA</td><td>C001</td><td>CountyA</td><td>RC001</td><td>RuralCountyA</td><td>VillageA</td><td>V001</td></tr><tr><td>P002</td><td>ProvinceB</td><td>C002</td><td>CountyB</td><td>RC002</td><td>RuralCountyB</td><td>VillageB</td><td>V002</td></tr><tr><td>P001</td><td>ProvinceA</td><td>C001</td><td>CountyA</td><td>RC001</td><td>RuralCountyA</td><td>VillageC</td><td>V003</td></tr></tbody></table></div></div><div style="margin:15px;"><div><h2 id="filter-joined-results-just-by-required-columns">Filter joined results just by required columns</h2></div></div><div style="margin:15px;"><div><pre><code class="sourceCode language-clojure source-clojure bg-light">(defn get-dataset-results [columns]
+  (tc/select-columns (apply get-dataset-join-results columns) columns))</code></pre></div></div><div style="margin:15px;"><div><pre><code class="sourceCode language-clojure source-clojure bg-light">(get-dataset-results [:village_name :province_name])</code></pre></div></div><div style="margin:15px;"><div class="clay-dataset"><p>inner-join [3 2]:</p><table class="table"><thead><tr><th>:village_name</th><th>:province_name</th></tr></thead><tbody><tr><td>VillageA</td><td>ProvinceA</td></tr><tr><td>VillageB</td><td>ProvinceB</td></tr><tr><td>VillageC</td><td>ProvinceA</td></tr></tbody></table></div></div><div style="margin:15px;"><div><h1 id="calling-clojure-function-by-:namespace/function-keyword-style">Calling clojure function by :namespace/function keyword style</h1></div></div><div style="margin:15px;"><div><pre><code class="sourceCode language-clojure source-clojure bg-light">(defn get-fn
   [ns-fn-key]
   (let [ns-name (namespace ns-fn-key)
         fn-name (name ns-fn-key)]

@@ -136,9 +136,9 @@
               :foreign-keys {}}})
 ; ## Defining mock datasets
 (def mock-datasets
-  {:Village (tc/dataset {:village_name ["VillageA" "VillageB"]
-                         :village_code ["V001" "V002"]
-                         :rural_county_code ["RC001" "RC002"]})
+  {:Village (tc/dataset {:village_name ["VillageA" "VillageB" "VillageC"]
+                         :village_code ["V001" "V002" "V003"]
+                         :rural_county_code ["RC001" "RC002" "RC001"]})
    :RuralCounty (tc/dataset {:rural_county_name ["RuralCountyA" "RuralCountyB"]
                              :rural_county_code ["RC001" "RC002"]
                              :county_code ["C001" "C002"]})
@@ -149,11 +149,21 @@
                           :province_code ["P001" "P002"]})})
 ; # TableCloth operations
 
-
 (defn inner-join
   [ds1 ds2 left-column right-column]
-  (tc/inner-join ds1 ds2  {:left-columns [left-column]
-                           :right-columns [right-column]}))
+  (tc/inner-join ds1 ds2  {:left left-column
+                           :right right-column}))
+
+; ### example of inner join
+; #### village dataset
+(tc/dataset (:Village mock-datasets))
+; #### Rural county dataset
+(tc/dataset (:RuralCounty mock-datasets))
+(inner-join
+ (:Village mock-datasets) 
+ (:RuralCounty mock-datasets) 
+ :rural_county_code :rural_county_code)
+
 
 (defn get-dataset-by-name
   [name]
@@ -174,14 +184,18 @@
 #_(nest-join-steps
  (get-join-path datasets :village_code :province_code))
 ; ## postwalk joining on whole map (DSL)
-(defn get-results
+(defn get-dataset-join-results
   [column1 column2]
   (walk/postwalk #(do (if (and (map? %) (not (nil? (:function %))))
                         (do-inner-join %)
                         %)) (nest-join-steps
                               (get-join-path datasets column1 column2))))
-
-#_(get-results :village_code :province_code)
+; ### Example result
+(get-dataset-join-results :village_code :province_name)
+; ## Filter joined results just by required columns
+(defn get-dataset-results [columns]
+  (tc/select-columns (apply get-dataset-join-results columns) columns))
+(get-dataset-results [:village_name :province_name])
 
 #_(println env)
 ; # Calling clojure function by :namespace/function keyword style
